@@ -1,43 +1,74 @@
-VERDE = "VERDE"
+import numpy as np
+
+VERDE    = "VERDE"
 AMARILLO = "AMARILLO"
-ROJO = "ROJO"
+ROJO     = "ROJO"
 
 class ControladorSemaforo:
     def __init__(self):
-        self.estado = VERDE
-        self.tiempo_verde = 10
+        # Parámetros PID
+        self.Kp = 0.8
+        self.Ki = 0.15
+        self.Kd = 0.05
+
+        # Tiempos límite
+        self.t_min_verde = 8
+        self.t_max_verde = 30
+        self.t_min_rojo  = 8
+        self.t_max_rojo  = 25
         self.tiempo_amarillo = 3
-        self.tiempo_rojo = 10
+
+        # Estado
+        self.tiempo_verde    = 10
+        self.tiempo_rojo     = 10
+        self.estado          = VERDE
         self.contador_frames = 0
-        self.fps = 30
+        self.fps             = 30
+
+        # Variables internas PID
+        self.integral_v       = 0.0
+        self.error_anterior_v = 0.0
+        self.integral_r       = 0.0
+        self.error_anterior_r = 0.0
+
+        # Máximos para normalizar
+        self.MAX_VEHICULOS = 15
+        self.MAX_PEATONES  = 8
+        self.setpoint_v    = 0.3
+        self.setpoint_p    = 0.2
+
+    def _pid(self, error, integral, error_anterior, dt=1.0):
+        P        = self.Kp * error
+        integral = float(np.clip(integral + error * dt, -10, 10))
+        I        = self.Ki * integral
+        D        = self.Kd * (error - error_anterior) / dt
+        return P + I + D, integral, error
 
     def ajustar_tiempos(self, vehiculos, peatones):
-       
+        # Normalizar
+        densidad_v = min(vehiculos / self.MAX_VEHICULOS, 1.0)
+        densidad_p = min(peatones  / self.MAX_PEATONES,  1.0)
 
-        # Caso 1: Muchos peatones → prioridad peatones
-        if peatones > 5:
-            self.tiempo_rojo = 20    # más tiempo para que crucen
-            self.tiempo_verde = 8    # menos verde para autos
+        # PID vehículos → tiempo verde
+        error_v = densidad_v - self.setpoint_v
+        salida_v, self.integral_v, self.error_anterior_v = self._pid(
+            error_v, self.integral_v, self.error_anterior_v)
+        self.tiempo_verde = int(np.clip(
+            self.t_min_verde + salida_v * self.t_max_verde,
+            self.t_min_verde, self.t_max_verde))
 
-        # Caso 2: Muchos autos y pocos peatones → prioridad autos
-        elif vehiculos > 10 and peatones <= 4:
-            self.tiempo_verde = 20   # más verde para autos
-            self.tiempo_rojo = 8     # menos rojo
+        # PID peatones → tiempo rojo
+        error_p = densidad_p - self.setpoint_p
+        salida_p, self.integral_r, self.error_anterior_r = self._pid(
+            error_p, self.integral_r, self.error_anterior_r)
+        self.tiempo_rojo = int(np.clip(
+            self.t_min_rojo + salida_p * self.t_max_rojo,
+            self.t_min_rojo, self.t_max_rojo))
 
-        # Caso 3: Muchos autos Y muchos peatones → peatones ganan
-        elif vehiculos > 10 and peatones > 5:
-            self.tiempo_rojo = 18    # peatones cruzan primero
-            self.tiempo_verde = 10   # verde normal después
-
-        # Caso 4: Tráfico moderado
-        elif vehiculos > 5:
-            self.tiempo_verde = 15
-            self.tiempo_rojo = 10
-
-        # Caso 5: Poco tráfico → tiempos normales
-        else:
-            self.tiempo_verde = 10
-            self.tiempo_rojo = 10
+        # Prioridad peatones (seguridad)
+        if densidad_p > 0.6:
+            self.tiempo_rojo  = max(self.tiempo_rojo, 18)
+            self.tiempo_verde = min(self.tiempo_verde, 10)
 
     def actualizar(self, vehiculos, peatones):
         self.ajustar_tiempos(vehiculos, peatones)
