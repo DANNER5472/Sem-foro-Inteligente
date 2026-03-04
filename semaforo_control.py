@@ -8,11 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import control
 
-# ============================================================
-# 1. MODELO DEL SISTEMA
-# ============================================================
-K   = 60   # tiempo máximo de verde (segundos)
-tau = 5    # constante de tiempo
+
+K   = 60   
+tau = 5    
 
 G = control.tf([K], [tau, 1])
 print("=" * 50)
@@ -20,16 +18,10 @@ print("  ANÁLISIS MATEMÁTICO - SEMÁFORO INTELIGENTE")
 print("=" * 50)
 print(f"\n📌 Planta G(s):\n{G}")
 
-# ============================================================
-# 2. CONTROLADOR PID
-# ============================================================
 Kp, Ki, Kd = 0.8, 0.15, 0.05
 C = control.tf([Kd, Kp, Ki], [1, 0])
 print(f"\n📌 Controlador PID C(s):\n{C}")
 
-# ============================================================
-# 3. LAZO CERRADO
-# ============================================================
 lazo_abierto = control.series(C, G)
 lazo_cerrado = control.feedback(lazo_abierto, 1)
 
@@ -42,16 +34,10 @@ info = control.step_info(lazo_cerrado)
 print(f"✅ Tiempo de establecimiento: {info['SettlingTime']:.2f}s")
 print(f"✅ Sobreimpulso: {info['Overshoot']:.2f}%")
 
-# ============================================================
-# 4. GRÁFICAS
-# ============================================================
-t = np.linspace(0, 60, 1000)
 
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-fig.suptitle("Análisis Matemático - Control Inteligente de Semáforos\nProyecto IA - Bolivia",
-             fontsize=13, fontweight='bold')
 
-# --- Respuesta al Escalón ---
+
+
 t_step, y_step = control.step_response(lazo_cerrado, T=t)
 ax1 = axes[0, 0]
 ax1.plot(t_step, y_step * K, 'b-', linewidth=2, label='Tiempo de verde')

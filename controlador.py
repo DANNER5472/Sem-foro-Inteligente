@@ -6,32 +6,32 @@ ROJO     = "ROJO"
 
 class ControladorSemaforo:
     def __init__(self):
-        # Parámetros PID
+     
         self.Kp = 0.8
         self.Ki = 0.15
         self.Kd = 0.05
 
-        # Tiempos límite
+    
         self.t_min_verde = 8
         self.t_max_verde = 30
         self.t_min_rojo  = 8
         self.t_max_rojo  = 25
         self.tiempo_amarillo = 3
 
-        # Estado
+        
         self.tiempo_verde    = 10
         self.tiempo_rojo     = 10
         self.estado          = VERDE
         self.contador_frames = 0
         self.fps             = 30
 
-        # Variables internas PID
+       
         self.integral_v       = 0.0
         self.error_anterior_v = 0.0
         self.integral_r       = 0.0
         self.error_anterior_r = 0.0
 
-        # Máximos para normalizar
+        
         self.MAX_VEHICULOS = 15
         self.MAX_PEATONES  = 8
         self.setpoint_v    = 0.3
@@ -45,11 +45,11 @@ class ControladorSemaforo:
         return P + I + D, integral, error
 
     def ajustar_tiempos(self, vehiculos, peatones):
-        # Normalizar
+
         densidad_v = min(vehiculos / self.MAX_VEHICULOS, 1.0)
         densidad_p = min(peatones  / self.MAX_PEATONES,  1.0)
 
-        # PID vehículos → tiempo verde
+
         error_v = densidad_v - self.setpoint_v
         salida_v, self.integral_v, self.error_anterior_v = self._pid(
             error_v, self.integral_v, self.error_anterior_v)
@@ -57,7 +57,6 @@ class ControladorSemaforo:
             self.t_min_verde + salida_v * self.t_max_verde,
             self.t_min_verde, self.t_max_verde))
 
-        # PID peatones → tiempo rojo
         error_p = densidad_p - self.setpoint_p
         salida_p, self.integral_r, self.error_anterior_r = self._pid(
             error_p, self.integral_r, self.error_anterior_r)
@@ -65,7 +64,6 @@ class ControladorSemaforo:
             self.t_min_rojo + salida_p * self.t_max_rojo,
             self.t_min_rojo, self.t_max_rojo))
 
-        # Prioridad peatones (seguridad)
         if densidad_p > 0.6:
             self.tiempo_rojo  = max(self.tiempo_rojo, 18)
             self.tiempo_verde = min(self.tiempo_verde, 10)
