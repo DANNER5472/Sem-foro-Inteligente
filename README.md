@@ -39,3 +39,5 @@ Y también crea el `requirements.txt`:
 ultralytics==8.4.14
 opencv-python==4.13.0.90
 numpy==2.4.2
+
+
